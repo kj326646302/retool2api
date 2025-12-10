@@ -165,7 +165,7 @@ async function retoolGetMessage(
   acc: RetoolAccount,
   agentId: string,
   runId: string,
-  timeoutMs = 300_000,
+  timeoutMs = 600_000, // 10 minutes timeout (Retool can take a while for complex queries)
 ): Promise<string> {
   const url = `https://${acc.domain_name}/api/agents/${agentId}/logs/${runId}`;
   const deadline = Date.now() + timeoutMs;
@@ -308,10 +308,20 @@ function requireAuth(req: Request): string {
   return token;
 }
 
+// CORS headers for cross-origin requests (needed for desktop apps like Cherry Studio)
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
 function jsonResponse(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      ...CORS_HEADERS,
+    },
   });
 }
 
@@ -338,6 +348,7 @@ function sseStream(
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
+      ...CORS_HEADERS,
     },
   });
 }
@@ -391,6 +402,14 @@ async function* errorStreamGenerator(msg: string, code = 503) {
 async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const { pathname } = url;
+
+  // ------------------------------------------------ OPTIONS (CORS preflight)
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: CORS_HEADERS,
+    });
+  }
 
   // ------------------------------------------------ GET /debug
   if (pathname === "/debug" && req.method === "GET") {
