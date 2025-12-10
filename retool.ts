@@ -477,6 +477,7 @@ async function handleRequest(req: Request): Promise<Response> {
     }
 
     const formatted = formatMessagesForRetool(body.messages);
+    console.log(`[REQUEST] model=${body.model}, stream=${body.stream}, messages=${body.messages.length}`);
     logDebug(`formatted:\n${formatted.slice(0, 120)}…`);
 
     // Collect errors during account attempts
@@ -490,10 +491,19 @@ async function handleRequest(req: Request): Promise<Response> {
 
       attemptCount++;
       const agentId = acc.selected_agent_id!;
+      console.log(`[ATTEMPT ${attemptCount}] account=${acc.domain_name}, agent=${agentId}`);
       try {
+        console.log(`[STEP] Creating thread...`);
         const threadId = await retoolGetThreadId(acc, agentId);
+        console.log(`[STEP] Thread created: ${threadId}`);
+        
+        console.log(`[STEP] Sending message...`);
         const runId = await retoolSendMessage(acc, agentId, threadId, formatted);
+        console.log(`[STEP] Message sent, runId: ${runId}`);
+        
+        console.log(`[STEP] Waiting for response (timeout: 10min)...`);
         const responseTxt = await retoolGetMessage(acc, agentId, runId);
+        console.log(`[STEP] Response received, length: ${responseTxt.length}`);
 
         if (body.stream) {
           return sseStream(retoolStreamGenerator(responseTxt, body.model));
