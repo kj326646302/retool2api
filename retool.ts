@@ -544,7 +544,8 @@ try {
   console.log(`Configuration loaded: ${VALID_CLIENT_KEYS.size} client keys, ${RETOOL_ACCOUNTS.length} Retool accounts`);
 } catch (error) {
   console.error(`[FATAL] Failed to load configuration: ${error instanceof Error ? error.message : String(error)}`);
-  Deno.exit(1);
+  // Note: Deno.exit() is not allowed in Deno Deploy, so we throw instead
+  throw new Error("Configuration failed - cannot start server");
 }
 
 await initializeRetoolEnvironment();
