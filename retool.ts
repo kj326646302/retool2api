@@ -537,6 +537,11 @@ async function handleRequest(req: Request): Promise<Response> {
 
 // Load configuration from environment variables
 try {
+  // Debug: Log available environment variables (without values for security)
+  console.log("[DEBUG] Checking environment variables...");
+  console.log(`[DEBUG] CLIENT_API_KEYS defined: ${Deno.env.get("CLIENT_API_KEYS") !== undefined}`);
+  console.log(`[DEBUG] RETOOL_ACCOUNTS defined: ${Deno.env.get("RETOOL_ACCOUNTS") !== undefined}`);
+  
   CONFIG = loadConfig();
   VALID_CLIENT_KEYS = CONFIG.clientApiKeys;
   RETOOL_ACCOUNTS = CONFIG.retoolAccounts;
@@ -544,8 +549,11 @@ try {
   console.log(`Configuration loaded: ${VALID_CLIENT_KEYS.size} client keys, ${RETOOL_ACCOUNTS.length} Retool accounts`);
 } catch (error) {
   console.error(`[FATAL] Failed to load configuration: ${error instanceof Error ? error.message : String(error)}`);
+  if (error instanceof Error && error.stack) {
+    console.error(`[FATAL] Stack trace: ${error.stack}`);
+  }
   // Note: Deno.exit() is not allowed in Deno Deploy, so we throw instead
-  throw new Error("Configuration failed - cannot start server");
+  throw new Error(`Configuration failed - cannot start server: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 await initializeRetoolEnvironment();
